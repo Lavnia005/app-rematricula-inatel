@@ -53,10 +53,11 @@ header {
   cursor: pointer;
 }
 
-header .logo {
-  font-weight: 700;
-  color: #168bd1;
-  font-size: 1.2rem;
+.logo-img {
+  width: 105px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
 }
 
 .user-avatar {
