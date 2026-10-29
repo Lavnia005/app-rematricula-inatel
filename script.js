@@ -30,40 +30,92 @@ const disciplinas = [
   },
 ];
 
+// Função para exibir as disciplinas
 function renderizarDisciplinas() {
   const container = document.getElementById("lista-disciplinas");
-  const badge = document.getElementById("contador-badge");
+
   container.innerHTML = "";
 
   let selecionadasCount = 0;
+  let totalCreditos = 0;
 
   disciplinas.forEach((disc, index) => {
-    if (disc.selecionada) selecionadasCount++;
+    if (disc.selecionada) {
+      selecionadasCount++;
+      totalCreditos += disc.creditos;
+    }
 
     const item = document.createElement("div");
-    item.className = `disciplina-item ${disc.selecionada ? "selected" : ""}`;
-    item.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <input type="checkbox" ${disc.selecionada ? "checked" : ""} style="width: 18px; height: 18px; accent-color: #0056b3;">
-                <div>
-                    <strong style="font-size: 0.9rem; color: #111;">${disc.nome}</strong>
-                    <p style="font-size: 0.75rem; color: #666; margin-top: 2px;"><i class="fa-regular fa-clock"></i> ${disc.horario}</p>
-                </div>
-            </div>
-            <span style="font-size: 0.75rem; background: #e5e7eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${disc.creditos} CR</span>
-        `;
 
-    // Evento de clique para alternar seleção
+    item.className = `disciplina-item ${disc.selecionada ? "selected" : ""}`;
+
+    item.innerHTML = `
+      <div class="disciplina-info">
+
+        <input
+          type="checkbox"
+          class="disciplina-checkbox"
+          ${disc.selecionada ? "checked" : ""}
+        >
+
+        <div class="disciplina-codigo">
+          ${disc.id}
+        </div>
+
+        <div class="disciplina-detalhes">
+          <strong>${disc.nome}</strong>
+
+          <p>
+            <i class="fa-regular fa-clock"></i>
+            ${disc.horario}
+          </p>
+        </div>
+
+      </div>
+
+      <span class="disciplina-creditos">
+        ${disc.creditos} CR
+      </span>
+    `;
+
+    // Evento para selecionar ou desmarcar disciplina
     item.addEventListener("click", () => {
       disciplinas[index].selecionada = !disciplinas[index].selecionada;
+
       renderizarDisciplinas();
     });
 
     container.appendChild(item);
   });
 
-  badge.innerText = `${selecionadasCount} selecionadas`;
+  // Atualizar contador de disciplinas
+  document.getElementById("contador-badge").innerText =
+    `${selecionadasCount} selecionadas`;
+
+  // Atualizar resumo da grade
+  document.getElementById("total-disciplinas").innerText = selecionadasCount;
+
+  document.getElementById("total-creditos").innerText = totalCreditos;
+
+  // Atualizar barra de confirmação
+  document.getElementById("resumo-quantidade").innerText =
+    `${selecionadasCount} disciplinas`;
+
+  document.getElementById("resumo-creditos").innerText =
+    `${totalCreditos} créditos`;
 }
+
+// Botão de confirmação
+document.getElementById("confirmar-btn").addEventListener("click", () => {
+  const selecionadas = disciplinas.filter((disc) => disc.selecionada);
+
+  if (selecionadas.length === 0) {
+    alert("Selecione pelo menos uma disciplina!");
+    return;
+  }
+
+  alert("Sua grade foi confirmada com sucesso!");
+});
 
 // Inicializar a lista ao carregar a página
 document.addEventListener("DOMContentLoaded", () => {
