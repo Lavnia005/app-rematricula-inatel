@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rematrícula - Inatel</title>
+    <!-- Google Fonts & Ícones -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Ligação com o CSS externo -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="mobile-container">
+      <!-- Cabeçalho -->
+      <header>
+        <i class="fa-solid fa-bars menu-icon"></i>
+        <div class="logo">INATEL</div>
+        <div class="user-avatar">LA</div>
+      </header>
+
+      <!-- Área de Conteúdo Principal -->
+      <div class="content">
+        <h2>Sua rematrícula</h2>
+        <p class="subtitle">Engenharia de Software · 2025/2</p>
+
+        <!-- Card de Estado -->
+        <div class="status-card">
+          <span class="status-tag">SOLICITAÇÃO #RM-2025-01872</span>
+          <h4>Em preenchimento</h4>
+          <p>Finalize até 18 de julho, às 23:59.</p>
+        </div>
+
+        <!-- Secção de Disciplinas -->
+        <div class="section-header">
+          <h3>Escolha as disciplinas</h3>
+          <span id="contador-badge" class="badge">0 selecionadas</span>
+        </div>
+
+        <div class="disciplinas-list" id="lista-disciplinas">
+          <!-- Preenchido via JavaScript ou estático -->
+        </div>
+      </div>
+
+      <!-- Menu Inferior Fixo -->
+      <nav class="bottom-nav">
+        <a href="#"><i class="fa-solid fa-house"></i>Início</a>
+        <a href="#" class="active"
+          ><i class="fa-solid fa-book-open"></i>Rematrícula</a
+        >
+        <a href="#"><i class="fa-regular fa-calendar"></i>Agenda</a>
+        <a href="#"><i class="fa-regular fa-user"></i>Perfil</a>
+      </nav>
+    </div>
+
+    <!-- Ligação com o JavaScript externo -->
+    <script src="script.js"></script>
+  </body>
+</html>
