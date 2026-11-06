@@ -84,6 +84,18 @@ const telaHorarios = document.getElementById("tela-horarios");
 const barraConfirmacao = document.querySelector(".confirm-bar");
 const navegacao = document.querySelector(".bottom-nav");
 
+// ELEMENTOS DO POPUP
+
+const modal = document.getElementById("modal-feedback");
+const modalIcon = document.getElementById("modal-icon");
+const modalTitulo = document.getElementById("modal-titulo");
+const modalMensagem = document.getElementById("modal-mensagem");
+const modalConfirmar = document.getElementById("modal-confirmar");
+const modalCancelar = document.getElementById("modal-cancelar");
+
+let acaoModal = null;
+let ultimoElementoFocado = null;
+
 // DIAS DA SEMANA
 
 const dias = [
@@ -97,6 +109,81 @@ const dias = [
 // HORÁRIOS DA GRADE
 
 const faixasHorarios = ["17:10", "19:00", "20:50"];
+
+// ABRIR POPUP PERSONALIZADO
+
+function abrirModal(
+  tipo,
+  titulo,
+  mensagem,
+  acao = null,
+  confirmar = "Entendi",
+) {
+  ultimoElementoFocado = document.activeElement;
+
+  modalIcon.className = "modal-icon";
+
+  if (tipo === "erro") {
+    modalIcon.classList.add("erro");
+    modalIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+  } else if (tipo === "aviso") {
+    modalIcon.classList.add("aviso");
+    modalIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+  } else {
+    modalIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+  }
+
+  modalTitulo.textContent = titulo;
+  modalMensagem.textContent = mensagem;
+  modalConfirmar.textContent = confirmar;
+
+  acaoModal = acao;
+
+  modalCancelar.hidden = !acao;
+
+  modal.hidden = false;
+
+  modalConfirmar.focus();
+}
+
+// FECHAR POPUP
+
+function fecharModal() {
+  modal.hidden = true;
+  acaoModal = null;
+
+  if (ultimoElementoFocado && ultimoElementoFocado.focus) {
+    ultimoElementoFocado.focus();
+  }
+}
+
+modalConfirmar.addEventListener("click", () => {
+  const acao = acaoModal;
+
+  fecharModal();
+
+  if (acao) {
+    acao();
+  }
+});
+
+modalCancelar.addEventListener("click", fecharModal);
+
+// FECHAR CLICANDO FORA DO POPUP
+
+modal.addEventListener("click", (event) => {
+  if (event.target === modal) {
+    fecharModal();
+  }
+});
+
+// FECHAR COM A TECLA ESC
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !modal.hidden) {
+    fecharModal();
+  }
+});
 
 // EXIBIR DISCIPLINAS
 
@@ -124,7 +211,9 @@ function renderizarDisciplinas() {
         <input
           type="checkbox"
           class="disciplina-checkbox"
+          id="disc-${disc.id}"
           ${disc.selecionada ? "checked" : ""}
+          aria-label="Selecionar ${disc.nome}"
         >
 
         <div class="disciplina-codigo">
@@ -143,12 +232,18 @@ function renderizarDisciplinas() {
       </span>
     `;
 
-    item.addEventListener("click", () => {
-      disciplinas[index].selecionada = !disciplinas[index].selecionada;
+    item.addEventListener("click", (event) => {
+      if (event.target.type === "checkbox") {
+        return;
+      }
 
-      delete horariosSelecionados[disc.id];
+      alternarDisciplina(index);
+    });
 
-      renderizarDisciplinas();
+    const checkbox = item.querySelector("input");
+
+    checkbox.addEventListener("change", () => {
+      alternarDisciplina(index);
     });
 
     container.appendChild(item);
@@ -168,13 +263,28 @@ function renderizarDisciplinas() {
     `${totalCreditos} créditos`;
 }
 
+// ALTERAR SELEÇÃO DA DISCIPLINA
+
+function alternarDisciplina(index) {
+  disciplinas[index].selecionada = !disciplinas[index].selecionada;
+
+  delete horariosSelecionados[disciplinas[index].id];
+
+  renderizarDisciplinas();
+}
+
 // ABRIR SEGUNDA TELA
 
 document.getElementById("confirmar-btn").addEventListener("click", () => {
   const selecionadas = disciplinas.filter((disc) => disc.selecionada);
 
   if (selecionadas.length === 0) {
-    alert("Selecione pelo menos uma disciplina!");
+    abrirModal(
+      "aviso",
+      "Nenhuma disciplina selecionada",
+      "Selecione pelo menos uma disciplina antes de continuar.",
+    );
+
     return;
   }
 
@@ -222,17 +332,16 @@ function renderizarOpcoesHorarios() {
         <input
           type="radio"
           name="horario-${disc.id}"
+          value="${index}"
           ${selecionado ? "checked" : ""}
         >
 
         <div>
-
           <strong>Opção ${index + 1}</strong>
 
           <span>
             ${horario.dia} · ${horario.inicio} às ${horario.fim}
           </span>
-
         </div>
       `;
 
@@ -259,6 +368,92 @@ function horariosConflitam(horarioA, horarioB) {
   }
 
   return horarioA.inicio < horarioB.fim && horarioB.inicio < horarioA.fim;
+}
+
+// IDENTIFICAR PROBLEMAS NA GRADE
+
+function obterEstadoGrade() {
+  const selecionadas = disciplinas.filter((disc) => disc.selecionada);
+
+  const pendentes = selecionadas.filter(
+    (disc) => horariosSelecionados[disc.id] === undefined,
+  );
+
+  const conflitos = [];
+
+  for (let i = 0; i < selecionadas.length; i++) {
+    for (let j = i + 1; j < selecionadas.length; j++) {
+      const discA = selecionadas[i];
+      const discB = selecionadas[j];
+
+      const opcaoA = horariosSelecionados[discA.id];
+      const opcaoB = horariosSelecionados[discB.id];
+
+      if (opcaoA === undefined || opcaoB === undefined) {
+        continue;
+      }
+
+      const horarioA = discA.horarios[opcaoA];
+      const horarioB = discB.horarios[opcaoB];
+
+      if (horariosConflitam(horarioA, horarioB)) {
+        conflitos.push({
+          disciplinaA: discA.id,
+          disciplinaB: discB.id,
+          dia: horarioA.dia,
+          horario: `${horarioA.inicio} às ${horarioA.fim}`,
+        });
+      }
+    }
+  }
+
+  return {
+    selecionadas,
+    pendentes,
+    conflitos,
+  };
+}
+
+// ATUALIZAR MENSAGEM DE FEEDBACK
+
+function atualizarFeedbackGrade(estado) {
+  const feedback = document.getElementById("feedback-grade");
+
+  feedback.className = "grade-feedback";
+
+  const icone = feedback.querySelector("i");
+  const mensagem = feedback.querySelector("span");
+
+  if (estado.pendentes.length > 0) {
+    feedback.classList.add("aviso");
+
+    icone.className = "fa-solid fa-circle-info";
+
+    mensagem.textContent =
+      `Falta escolher o horário de ${estado.pendentes.length} disciplina(s). ` +
+      "Selecione uma das opções para continuar.";
+  } else if (estado.conflitos.length > 0) {
+    feedback.classList.add("erro");
+
+    icone.className = "fa-solid fa-triangle-exclamation";
+
+    const conflito = estado.conflitos[0];
+
+    mensagem.textContent =
+      `Conflito entre ${conflito.disciplinaA} e ${conflito.disciplinaB}: ` +
+      `${conflito.dia}, das ${conflito.horario}. Escolha outro horário.`;
+
+    if (estado.conflitos.length > 1) {
+      mensagem.textContent += ` Existem ${estado.conflitos.length} conflitos na grade.`;
+    }
+  } else {
+    feedback.classList.add("sucesso");
+
+    icone.className = "fa-solid fa-circle-check";
+
+    mensagem.textContent =
+      "Tudo certo! Todos os horários foram selecionados e não existem conflitos.";
+  }
 }
 
 // MONTAR GRADE SEMANAL
@@ -334,31 +529,17 @@ function renderizarGrade() {
 // VERIFICAR SE TODOS OS HORÁRIOS FORAM ESCOLHIDOS
 
 function verificarSelecao() {
-  const selecionadas = disciplinas.filter((disc) => disc.selecionada);
+  const estado = obterEstadoGrade();
 
-  const todasEscolhidas = selecionadas.every(
-    (disc) => horariosSelecionados[disc.id] !== undefined,
-  );
+  const todasEscolhidas = estado.pendentes.length === 0;
 
-  let existeConflito = false;
-
-  for (let i = 0; i < selecionadas.length; i++) {
-    for (let j = i + 1; j < selecionadas.length; j++) {
-      const horarioA =
-        selecionadas[i].horarios[horariosSelecionados[selecionadas[i].id]];
-
-      const horarioB =
-        selecionadas[j].horarios[horariosSelecionados[selecionadas[j].id]];
-
-      if (horarioA && horarioB && horariosConflitam(horarioA, horarioB)) {
-        existeConflito = true;
-      }
-    }
-  }
+  const existeConflito = estado.conflitos.length > 0;
 
   const botaoFinalizar = document.getElementById("finalizar-btn");
 
   botaoFinalizar.disabled = !todasEscolhidas || existeConflito;
+
+  atualizarFeedbackGrade(estado);
 }
 
 // VOLTAR PARA PRIMEIRA TELA
@@ -374,31 +555,70 @@ document.getElementById("voltar-btn").addEventListener("click", () => {
 // FINALIZAR REMATRÍCULA
 
 document.getElementById("finalizar-btn").addEventListener("click", () => {
-  const selecionadas = disciplinas.filter((disc) => disc.selecionada);
+  const estado = obterEstadoGrade();
 
-  const existeConflito = selecionadas.some((disc, index) => {
-    return selecionadas.slice(index + 1).some((outraDisc) => {
-      const horarioA = disc.horarios[horariosSelecionados[disc.id]];
+  if (estado.pendentes.length > 0 || estado.conflitos.length > 0) {
+    abrirModal(
+      "aviso",
+      "Grade incompleta",
+      "Verifique os horários selecionados antes de finalizar.",
+    );
 
-      const horarioB = outraDisc.horarios[horariosSelecionados[outraDisc.id]];
-
-      return horariosConflitam(horarioA, horarioB);
-    });
-  });
-
-  if (existeConflito) {
-    alert("Existem conflitos de horários na sua grade!");
     return;
   }
 
-  alert("Sua rematrícula foi finalizada com sucesso!");
-
-  telaHorarios.hidden = true;
-
-  telaPrincipal.hidden = false;
-  barraConfirmacao.hidden = false;
-  navegacao.hidden = false;
+  abrirModal(
+    "aviso",
+    "Confirmar rematrícula?",
+    "Confira sua grade semanal. Deseja realmente confirmar as disciplinas e os horários escolhidos?",
+    processarFinalizacao,
+    "Confirmar",
+  );
 });
+
+// PROCESSAR FINALIZAÇÃO
+
+function processarFinalizacao() {
+  const botao = document.getElementById("finalizar-btn");
+
+  botao.disabled = true;
+  botao.classList.add("processando");
+
+  botao.innerHTML = `
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    Processando...
+  `;
+
+  // Simulação do processamento no protótipo
+
+  setTimeout(() => {
+    botao.classList.remove("processando");
+
+    botao.innerHTML = `
+      Finalizar rematrícula
+      <i class="fa-solid fa-check"></i>
+    `;
+
+    telaHorarios.hidden = true;
+
+    telaPrincipal.hidden = false;
+    barraConfirmacao.hidden = false;
+    navegacao.hidden = false;
+
+    document.querySelector(".status-info h4").textContent = "Grade confirmada";
+
+    document.querySelector(".status-info p").textContent =
+      "Sua grade foi confirmada neste protótipo.";
+
+    abrirModal(
+      "sucesso",
+      "Grade confirmada!",
+      "Sua grade semanal foi confirmada com sucesso no protótipo. Todas as disciplinas e os horários foram registrados na visualização.",
+      null,
+      "Concluir",
+    );
+  }, 1000);
+}
 
 // INICIALIZAR PÁGINA
 
